@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="en-ZA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Shift</title>
+
+<!-- =====================================================================
+     CONTENT. Everything a scholar reads lives in this object.
+     Change copy here; the engine below does not need to be touched.
+
+     Notes for editing:
+     - A patient with an empty "tools" list greys out the tray.
+     - A patient with two "tools" entries asks for two picks, in that order.
+     - Option "type" is "with", "leave" or "push". Only "with" counts as landed.
+     - {saved}, {clinic}, {name}, {n} and {total} are filled in by the engine.
+     ===================================================================== -->
+<script>
+window.SHIFT = {
+  "clinic": "Maroela Clinic",
+
+  "tools": [
+    { "id": "specialist", "label": "Specialist app",  "card": "chat",
+      "hint": "Send a photo to a specialist",
+      "does": "Sends a photo and notes to a specialist, who replies" },
+    { "id": "xray",       "label": "AI X-ray reader", "card": "scan",
+      "hint": "Flag an X-ray that needs a TB test",
+      "does": "Flags a chest X-ray that needs a TB test" },
+    { "id": "tbtest",     "label": "Rapid TB test",   "card": "countdown",
+      "hint": "Confirm TB within two hours",
+      "does": "Confirms TB within two hours" },
+    { "id": "momconnect", "label": "MomConnect",      "card": "message",
+      "hint": "Sign up for health messages",
+      "does": "Signs a pregnant woman up for health messages" }
+  ],
+
+  "patients": [
+    {
+      "id": "fourie", "time": "08:00", "name": "Mrs Fourie", "short": "Mrs Fourie", "age": 63,
+      "arrival": "My eye has been red and sore for four days, Sister. This morning the light hurts it.",
+      "tools": [
+        { "id": "specialist",
+          "from": "Dr Naidoo, eye specialist",
+          "meta": "Replies in 35 minutes",
+          "answer": "Thank you for the clear photo. She needs to be seen at the district hospital this week. Please do not let this wait." }
+      ],
+      "saved": 21,
+      "obstacle": "This week? I cannot. I fetch three grandchildren from school every day. Their mother works in town until six.",
+      "question": "What do you do?",
+      "options": [
+        { "type": "leave",
+          "text": "Give her the referral letter and explain that the decision is hers.",
+          "room": "She folds the letter into her bag and thanks you. She does not say when she will go.",
+          "later": "Mrs Fourie did not go. The eye is worse, and she is back in your waiting room. The hospital can still help, but it will be harder now." },
+        { "type": "push",
+          "text": "Tell her plainly that she could lose sight in that eye, and book the hospital for tomorrow morning.",
+          "room": "She goes quiet and nods. She does not mention the children again.",
+          "later": "She missed the appointment, because nobody could fetch the children. She went two weeks later, when her daughter could take leave. The eye was treated late." },
+        { "type": "with",
+          "text": "Ask what would make it possible, then phone the neighbour she names and book Thursday's patient transport.",
+          "room": "She thinks. \"Mrs Jacobs next door could fetch them, if it is one day.\" You make both calls while she waits.",
+          "later": "Mrs Fourie went on Thursday, and the eye was treated in time. Mrs Jacobs fetched the children and got a milk tart for it." }
+      ]
+    },
+    {
+      "id": "khoza", "time": "09:10", "name": "Sibusiso Khoza", "short": "Sibusiso", "age": 34, "role": "taxi driver",
+      "arrival": "This cough will not go. Three weeks now. My passengers are starting to look at me.",
+      "tools": [
+        { "id": "xray",   "answer": "Flagged. This X-ray needs a TB test." },
+        { "id": "tbtest", "answer": "Sample loaded. Result in about two hours.", "countdownMinutes": 120 }
+      ],
+      "saved": 17,
+      "obstacle": "Two hours? Sister, I have lost R300 already this morning. I will come back tomorrow.",
+      "question": "What do you do?",
+      "options": [
+        { "type": "push",
+          "text": "Tell him he may not leave until the result is out.",
+          "room": "\"You cannot keep me here.\" He is gone before you finish the sentence.",
+          "later": "The test was positive. Sibusiso did not answer the clinic's calls for two weeks. He started treatment late, and angry." },
+        { "type": "with",
+          "text": "Take his number, agree to call him at the rank at 11:30, and explain why the result matters for his passengers too.",
+          "room": "He saves the clinic's number under \"Sister\". \"11:30. I will pick up.\"",
+          "later": "You called at 11:30. He came back at lunch and started treatment that day. Thandeka, the community health worker, checks in on him every week. He is driving, and the cough is easing." },
+        { "type": "leave",
+          "text": "Let him go, and ask him to come back tomorrow for the result.",
+          "room": "\"Sharp, Sister.\" He is out of the door in seconds.",
+          "later": "The test was positive, but he did not come back. It took a community health worker nine days to find him at the rank. He has started treatment now." }
+      ]
+    },
+    {
+      "id": "mokoena", "time": "10:40", "name": "Zanele Mokoena", "short": "Zanele", "age": 28,
+      "arrival": "It is my first baby. I do not know what I am supposed to know.",
+      "tools": [
+        { "id": "momconnect",
+          "answer": "Ready to register. She will get a message for each stage of her pregnancy, and reminders for her check-ups." }
+      ],
+      "saved": 9,
+      "obstacle": "The phone is Lwandile's. I use it when he is home. I do not want to ask him for it for this.",
+      "question": "What do you do?",
+      "options": [
+        { "type": "with",
+          "text": "Ask whose phone she would trust with this, and write her next visit on her clinic card before she leaves.",
+          "room": "\"My sister Busi. She reads everything anyway.\" You register Busi's number and circle the date on the card.",
+          "later": "Zanele has been to both check-ups. Busi reads her the messages on Sunday evenings, and has started adding advice of her own." },
+        { "type": "push",
+          "text": "Register Lwandile's number anyway, so that she does not miss out.",
+          "room": "She watches you type the number and says nothing.",
+          "later": "The messages arrive on Lwandile's phone. Zanele has seen two of them. She missed her second check-up." },
+        { "type": "leave",
+          "text": "Skip the registration and give her the pregnancy pamphlet.",
+          "room": "She puts the pamphlet in her bag with her clinic card.",
+          "later": "The pamphlet is still in her bag. She came to her second check-up a week late, because nobody reminded her." }
+      ]
+    },
+    {
+      "id": "abrahams", "time": "11:50", "name": "Mr Abrahams", "short": "Mr Abrahams", "age": 74,
+      "banner": "The tools saved you {saved} minutes this morning. Mr Abrahams is in the waiting room.",
+      "bannerButton": "Call him in",
+      "arrival": "Since my wife passed, I do not eat much. Is that something?",
+      "tools": [],
+      "saved": 0,
+      "question": "You have {saved} minutes. How do you spend them?",
+      "options": [
+        { "type": "leave",
+          "text": "Catch up on the morning's paperwork. Nothing he has said fits a test.",
+          "room": "At 12:30 his chair is empty.",
+          "later": "Mr Abrahams comes back, thinner. This time he does not ask whether it is something." },
+        { "type": "with",
+          "text": "Sit down with him and ask what he eats in a day, and who used to cook.",
+          "room": "\"Rachel cooked. Forty-six years. I can make tea and toast.\" He laughs at himself, then stops.",
+          "later": "You linked Mr Abrahams with Thandeka and the Wednesday lunch at the community hall. He has put on two kilograms. He left a bag of lemons from his tree at the front desk." },
+        { "type": "push",
+          "text": "Weigh him, check his blood pressure, and tell him he must eat three meals a day.",
+          "room": "\"Yes, Sister.\" He is down four kilograms since his last visit. He goes home to an empty kitchen.",
+          "later": "His weight is the same. He ate properly for three days. Nobody asked him why it stopped." }
+      ]
+    }
+  ],
+
+  "copy": {
+    "title": "One Shift",
+    "start": "You are the nurse in charge at {clinic}. Four patients are waiting. You have four tools.",
+    "startButton": "Open the clinic",
+    "savedLabel": "Minutes saved",
+    "savedNote": "Illustrative, for this game",
+    "savedPlus": "+{n} minutes",
+    "waiting": "Waiting: {names}",
+    "waitingNone": "The waiting room is empty.",
+    "trayLabel": "Your tools",
+    "pick": "Which tool can help?",
+    "pickNext": "Which tool comes next?",
+    "wrongTool": "That tool cannot answer this question",
+    "tooSoon": "Not yet. Another tool comes first.",
+    "noTool": "No tool for this.",
+    "tell": "Tell {name}",
+    "nextPatient": "Next patient",
+    "lastPatient": "Close the clinic",
+    "boardTitle": "Four weeks later",
+    "yourCall": "Your call:",
+    "landedMark": "This call landed.",
+    "summary": "The tools were right every time. What changed each story was what you did next.",
+    "count": "Your human calls landed for {n} of {total} patients.",
+    "next": "Continue to the next slide",
+    "nextHint": "Use the arrow to go to the next slide.",
+    "again": "Run the shift again"
+  }
+};
+</script>
+
+<style>
+  :root {
+    --wall: #E4EADB;
+    --floor: #CBD3BF;
+    --desk: #F6EED6;
+    --card: #FCF8EA;
+    --ink: #22302A;
+    --muted: #54625A;
+    --line: #C6CBB2;
+    --green: #2B6657;
+    --green-ink: #FFFFFF;
+    --marigold: #D9982B;
+    --cork: #C8A678;
+    --cork-shade: #B79265;
+    --note: #FCF8EA;
+    --scan: #1D2A30;
+    --fig-1: #2B6657; --fig-2: #B7791F; --fig-3: #7A4E6B; --fig-4: #3F5F86;
+    --sans: "Avenir Next", Avenir, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --wall: #17201C;
+      --floor: #222C27;
+      --desk: #222E29;
+      --card: #2B3A33;
+      --ink: #F0E8D0;
+      --muted: #AEB9AB;
+      --line: #43544C;
+      --green: #86C8B4;
+      --green-ink: #10201B;
+      --marigold: #EBB550;
+      --cork: #3B3329;
+      --cork-shade: #2E2820;
+      --note: #2B3A33;
+      --scan: #0F171B;
+      --fig-1: #86C8B4; --fig-2: #EBB550; --fig-3: #D3A4C4; --fig-4: #9DBBE0;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--wall);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, [tabindex]:focus-visible {
+    outline: 3px solid var(--ink);
+    outline-offset: 2px;
+  }
+  [tabindex="-1"]:focus { outline: none; }
+
+  .app { height: 100vh; height: 100dvh; min-height: 520px; max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; }
+  .screen { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .screen.on { display: flex; }
+
+  .primary {
+    min-height: 52px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--green);
+    color: var(--green-ink);
+    font-weight: 600;
+    font-size: 17px;
+    padding: 12px 22px;
+  }
+  .primary:hover { filter: brightness(1.08); }
+  .linkbtn { background: none; border: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 16px; padding: 12px; }
+  .linkbtn:hover { color: var(--ink); }
+
+  /* ---------- Start ---------- */
+  #start { overflow-y: auto; padding: 28px 20px 20px; }
+  #start h1 { font-family: var(--serif); font-weight: 400; font-size: 40px; line-height: 1.1; margin: 0 0 10px; }
+  #start .lede { font-family: var(--serif); font-size: 20px; line-height: 1.45; max-width: 30em; margin-bottom: 20px; }
+  .toollist { list-style: none; margin: 0 0 22px; padding: 0; display: grid; gap: 10px; max-width: 640px; }
+  .toollist li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: start; }
+  .toollist .ico { margin-top: 2px; }
+  .toollist b { display: block; font-weight: 600; }
+  .toollist span { color: var(--muted); }
+  #start .primary { align-self: flex-start; }
+  .grow { flex: 1; min-height: 8px; }
+
+  .ico { width: 26px; height: 26px; flex: none; color: var(--green); }
+  .ico * { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---------- Shift: wall, waiting room, desk, tray ---------- */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px 4px; }
+  .clockbox { display: flex; align-items: center; gap: 10px; }
+  .clock { width: 38px; height: 38px; flex: none; }
+  .clock .face { fill: var(--card); stroke: var(--ink); stroke-width: 2; }
+  .clock .hand { stroke: var(--ink); stroke-width: 2.4; stroke-linecap: round; }
+  .clock .hand.min { stroke-width: 1.8; }
+  .clock .pin { fill: var(--ink); }
+  .time { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .clinic { font-size: 13px; color: var(--muted); line-height: 1.2; }
+  .saved { text-align: right; line-height: 1.2; }
+  .saved .num { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .saved .lab { font-size: 13px; margin-left: 6px; }
+  .saved .ill { display: block; font-size: 12px; color: var(--muted); }
+  .saved.pop .num { animation: pop 500ms ease-out; display: inline-block; }
+  @keyframes pop { from { transform: scale(1.35); color: var(--marigold); } }
+
+  .waiting { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 0 12px; border-bottom: 3px solid var(--floor); }
+  .seat { text-align: center; }
+  .seat svg { display: block; width: 50px; height: 42px; margin: 0 auto; }
+  .seat .chair { fill: none; stroke: var(--muted); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .seat .who { display: block; font-size: 12.5px; line-height: 1.2; min-height: 18px; padding-bottom: 3px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .seat.empty .chair { opacity: 0.55; }
+
+  .desk { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--desk); }
+  .stage {
+    flex: 1; min-height: 150px; overflow-y: auto; padding: 12px 18px 14px;
+    background:
+      linear-gradient(var(--desk) 30%, transparent) top / 100% 36px no-repeat local,
+      linear-gradient(transparent, var(--desk) 70%) bottom / 100% 36px no-repeat local,
+      linear-gradient(rgba(0, 0, 0, 0.16), transparent) top / 100% 10px no-repeat scroll,
+      linear-gradient(transparent, rgba(0, 0, 0, 0.16)) bottom / 100% 10px no-repeat scroll;
+  }
+  .stage > * + * { margin-top: 12px; }
+  .name { font-family: var(--sans); font-size: 15px; font-weight: 600; margin: 0; color: var(--muted); }
+  .quote { font-family: var(--serif); font-size: 21px; line-height: 1.4; max-width: 30em; quotes: "\201C" "\201D"; }
+  .quote::before { content: open-quote; }
+  .quote::after { content: close-quote; }
+  .narr { font-family: var(--serif); font-size: 20px; line-height: 1.5; max-width: 32em; }
+  .banner { font-family: var(--serif); font-size: 23px; line-height: 1.4; max-width: 26em; padding-top: 8px; }
+  .prompt { font-weight: 600; font-size: 17px; }
+  .settle { animation: settle 500ms ease-out backwards; }
+  .settle.late { animation-delay: 700ms; }
+  @keyframes settle { from { opacity: 0; transform: translateY(6px); } }
+
+  .options { display: grid; gap: 8px; max-width: 640px; }
+  .opt {
+    text-align: left;
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .opt:hover { border-color: var(--green); }
+  .chosen { border-left: 4px solid var(--muted); padding: 2px 0 2px 14px; color: var(--muted); max-width: 36em; }
+
+  /* Result cards: each looks like the tool that produced it. */
+  .result { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px; max-width: 560px; }
+  .result .tool { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 10px; }
+  .result .tool .ico { width: 20px; height: 20px; }
+  .result.compact { padding: 10px 14px; }
+  .result.compact .tool { margin-bottom: 2px; }
+  .chat .from { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .chat .av { width: 36px; height: 36px; border-radius: 50%; background: var(--green); color: var(--green-ink); display: grid; place-items: center; font-weight: 600; font-size: 14px; flex: none; }
+  .chat .fromname { font-weight: 600; line-height: 1.25; }
+  .chat .meta { font-size: 14px; color: var(--muted); line-height: 1.25; }
+  .bubble { background: var(--wall); border-radius: 4px 14px 14px 14px; padding: 11px 14px; }
+  .scanrow { display: grid; grid-template-columns: 92px 1fr; gap: 14px; align-items: center; }
+  .xr { width: 92px; height: 104px; display: block; }
+  .xr .plate { fill: var(--scan); }
+  .xr .bone { fill: none; stroke: #C9D6D8; stroke-width: 2; stroke-linecap: round; opacity: 0.8; }
+  .xr .lung { fill: #C9D6D8; opacity: 0.14; }
+  .xr .flag { fill: none; stroke: var(--marigold); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .flagline { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
+  .flagline svg { width: 20px; height: 20px; flex: none; margin-top: 2px; color: var(--marigold); }
+  .flagline svg * { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .lcd { font-family: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace; font-size: 28px; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; background: var(--scan); color: #D7E4E6; border-radius: 6px; padding: 8px 14px; display: inline-block; margin-bottom: 10px; }
+  .message .bubble { border-radius: 14px 14px 14px 4px; }
+  .plus { display: inline-block; font-weight: 600; font-size: 15px; border: 1.5px solid var(--marigold); border-radius: 999px; padding: 3px 12px; }
+  .plus small { font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 6px; }
+
+  .traywrap { position: relative; border-top: 2px solid var(--line); background: var(--desk); padding: 10px 12px 10px; }
+  .traywrap.away { display: none; }
+  .traymsg {
+    position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%);
+    width: max-content; max-width: calc(100% - 24px);
+    margin-bottom: 10px; padding: 8px 16px; border-radius: 999px;
+    background: var(--ink); color: var(--desk);
+    font-size: 15px; font-weight: 600; line-height: 1.3; text-align: center;
+    pointer-events: none;
+  }
+  .traymsg:empty { display: none; }
+  .tray { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .toolbtn {
+    display: grid; grid-template-columns: 26px 1fr; gap: 3px 8px; align-items: center;
+    text-align: left;
+    min-height: 56px;
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 10px;
+  }
+  .toolbtn .lab { font-weight: 600; font-size: 15px; line-height: 1.2; }
+  .toolbtn .hint { grid-column: 1 / -1; font-size: 13.5px; line-height: 1.3; color: var(--muted); }
+  .toolbtn:hover:not([disabled]) { border-color: var(--green); }
+  .toolbtn[disabled] { opacity: 0.45; cursor: default; }
+  .toolbtn.shake { animation: shake 320ms ease-in-out; }
+  @keyframes shake {
+    20% { transform: translateX(-5px); } 40% { transform: translateX(5px); }
+    60% { transform: translateX(-3px); } 80% { transform: translateX(3px); }
+  }
+  /* Resting tray: tools put down, one compact row. */
+  .tray.rest, .tray.dead { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .tray.rest .toolbtn, .tray.dead .toolbtn { grid-template-columns: 1fr; justify-items: center; text-align: center; min-height: 48px; padding: 6px 2px; gap: 2px; }
+  .tray.rest .toolbtn .hint, .tray.dead .toolbtn .hint { display: none; }
+  .tray.rest .toolbtn .lab, .tray.dead .toolbtn .lab { font-size: 11.5px; font-weight: 500; }
+  .tray.rest .toolbtn .ico, .tray.dead .toolbtn .ico { width: 20px; height: 20px; }
+  .tray.rest .toolbtn { opacity: 0.6; cursor: default; }
+  .tray.rest .toolbtn:hover { border-color: var(--line); }
+  .tray.dead .toolbtn { background: transparent; border-style: dashed; color: var(--muted); }
+  .tray.dead .toolbtn .ico { color: var(--muted); }
+  .tray.dead .toolbtn:hover { border-color: var(--line); }
+
+  /* ---------- Four weeks later ---------- */
+  #board { overflow-y: auto; padding: 22px 16px 22px; }
+  #board h1 { font-family: var(--serif); font-weight: 400; font-size: 32px; line-height: 1.15; margin: 0 0 14px; }
+  .pinboard { background: var(--cork); border: 6px solid var(--cork-shade); border-radius: 6px; padding: 18px 12px; display: grid; gap: 16px; }
+  .pinned { position: relative; background: var(--note); border-radius: 2px; padding: 20px 16px 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18); }
+  .pinned:nth-child(odd) { transform: rotate(-0.6deg); }
+  .pinned:nth-child(even) { transform: rotate(0.5deg); }
+  .pinned::before { content: ""; position: absolute; top: 7px; left: 50%; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: var(--muted); }
+  .pinned h2 { font-family: var(--serif); font-weight: 400; font-size: 21px; line-height: 1.2; margin: 0 0 6px; padding-right: 30px; }
+  .pinned .call { color: var(--muted); margin-bottom: 8px; }
+  .pinned .later { font-family: var(--serif); font-size: 18px; line-height: 1.5; }
+  .marker { position: absolute; top: -5px; right: 14px; width: 22px; height: 34px; }
+  .marker path { fill: var(--marigold); }
+  .closing { padding: 22px 4px 0; max-width: 36em; }
+  .closing .summary { font-family: var(--serif); font-size: 21px; line-height: 1.45; margin-bottom: 10px; }
+  .closing .count { margin-bottom: 18px; }
+  .closing .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+  .hint2 { min-height: 22px; font-size: 14px; margin-top: 8px; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+  @media (min-width: 640px) {
+    #start { padding: 44px 40px 32px; }
+    #start h1 { font-size: 52px; }
+    .top { padding: 14px 28px 8px; }
+    .waiting { padding: 0 24px; }
+    .seat svg { width: 68px; height: 56px; }
+    .seat .who { font-size: 14px; }
+    .stage { padding: 16px 32px 16px; }
+    .stage > * + * { margin-top: 14px; }
+    .quote { font-size: 24px; }
+    .banner { font-size: 28px; }
+    .traywrap { padding: 12px 24px 16px; }
+    .options { gap: 10px; }
+    .opt { padding: 13px 16px; }
+    .tray { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    #board { padding: 32px 32px 32px; }
+    .pinboard { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 24px 20px; gap: 22px 20px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+
+<body>
+<main class="app">
+
+  <section class="screen on" id="start" aria-labelledby="start-title">
+    <h1 id="start-title" tabindex="-1"></h1>
+    <p class="lede" id="start-line"></p>
+    <ul class="toollist" id="toollist"></ul>
+    <div class="grow"></div>
+    <button class="primary" id="open" type="button"></button>
+  </section>
+
+  <section class="screen" id="shift" aria-label="The shift">
+    <div class="top">
+      <div class="clockbox">
+        <svg class="clock" viewBox="0 0 40 40" aria-hidden="true">
+          <circle class="face" cx="20" cy="20" r="17"/>
+          <line class="hand hour" id="hand-h" x1="20" y1="20" x2="20" y2="11"/>
+          <line class="hand min" id="hand-m" x1="20" y1="20" x2="20" y2="7"/>
+          <circle class="pin" cx="20" cy="20" r="1.8"/>
+        </svg>
+        <div>
+          <div class="time" id="time"></div>
+          <div class="clinic" id="clinic"></div>
+        </div>
+      </div>
+      <div class="saved" id="saved">
+        <span class="num" id="saved-num">0</span><span class="lab" id="saved-lab"></span>
+        <span class="ill" id="saved-ill"></span>
+      </div>
+    </div>
+    <div class="waiting" id="waiting" role="img"></div>
+    <div class="desk">
+      <div class="stage" id="stage" tabindex="-1"></div>
+      <div class="traywrap" id="traywrap">
+        <p class="traymsg" id="traymsg" role="status"></p>
+        <div class="tray rest" id="tray"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="board" aria-labelledby="board-title">
+    <h1 id="board-title" tabindex="-1"></h1>
+    <div class="pinboard" id="pinboard"></div>
+    <div class="closing">
+      <p class="summary" id="summary"></p>
+      <p class="count" id="count"></p>
+      <div class="actions">
+        <button class="primary" id="next" type="button"></button>
+        <button class="linkbtn" id="again" type="button"></button>
+      </div>
+      <p class="hint2" id="hint" role="status"></p>
+    </div>
+  </section>
+
+</main>
+
+<!-- =====================================================================
+     ENGINE. No scholar-facing text below this line.
+     ===================================================================== -->
+<script>
+(function () {
+  "use strict";
+
+  var C = window.SHIFT;
+  var T = C.copy;
+  var P = C.patients;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  var S = null;
+  var countdown = null;
+  var counterAnim = null;
+  var msgTimer = null;
+
+  var ICONS = {
+    chat: '<svg class="ico" viewBox="0 0 26 26" aria-hidden="true"><path d="M4 5h18v12H12l-5 4v-4H4z"/><path d="M8.5 10h9M8.5 13h6"/></svg>',
+    scan: '<svg class="ico" viewBox="0 0 26 26" aria-hidden="true"><rect x="4" y="3.5" width="18" height="19" rx="2"/><path d="M13 7v12M13 10c-3 0-4.5 1.5-4.5 4M13 10c3 0 4.5 1.5 4.5 4M13 14c-2.4 0-3.6 1.2-3.6 3M13 14c2.4 0 3.6 1.2 3.6 3"/></svg>',
+    countdown: '<svg class="ico" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="14.5" r="8"/><path d="M13 10v4.5l3 2M10.5 3.5h5"/></svg>',
+    message: '<svg class="ico" viewBox="0 0 26 26" aria-hidden="true"><rect x="7.5" y="2.5" width="11" height="21" rx="2.2"/><path d="M11 6.5h4M10.5 11h5M10.5 14h3.5"/></svg>'
+  };
+
+  function $(id) { return document.getElementById(id); }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function fill(text, vars) {
+    return String(text).replace(/\{(\w+)\}/g, function (m, k) {
+      return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m;
+    });
+  }
+  // Typographic quotes for display. Config keeps plain quotes so it is easy to edit.
+  function curl(text) {
+    return String(text).replace(/"([^"]*)"/g, "“$1”").replace(/'/g, "’");
+  }
+  function vars(extra) {
+    var v = { clinic: C.clinic, saved: S ? S.saved : 0, total: P.length };
+    for (var k in extra) v[k] = extra[k];
+    return v;
+  }
+  function say(text, extra) { return curl(fill(text, vars(extra))); }
+  function toolById(id) {
+    for (var i = 0; i < C.tools.length; i++) if (C.tools[i].id === id) return C.tools[i];
+    return null;
+  }
+  function show(id) {
+    ["start", "shift", "board"].forEach(function (s) { $(s).classList.toggle("on", s === id); });
+  }
+  function focusQuietly(node) {
+    try { node.focus({ preventScroll: true }); } catch (e) { /* older browsers */ }
+  }
+  function tell(type, data) {
+    if (window.parent && window.parent !== window) {
+      var msg = { type: type };
+      for (var k in data) msg[k] = data[k];
+      try { window.parent.postMessage(msg, "*"); } catch (e) { /* harmless */ }
+    }
+  }
+  function initials(name) {
+    return name.split(/[\s,]+/).slice(0, 2).map(function (w) { return w.charAt(0); }).join("").toUpperCase();
+  }
+
+  /* ---------- Static text ---------- */
+  function build() {
+    document.title = T.title;
+    $("start-title").textContent = T.title;
+    $("start-line").textContent = say(T.start);
+    $("open").textContent = T.startButton;
+    $("clinic").textContent = C.clinic;
+    $("saved-lab").textContent = T.savedLabel;
+    $("saved-ill").textContent = T.savedNote;
+    $("board-title").textContent = T.boardTitle;
+    $("summary").textContent = curl(T.summary);
+    $("next").textContent = T.next;
+    $("again").textContent = T.again;
+    $("tray").setAttribute("aria-label", T.trayLabel);
+    $("tray").setAttribute("role", "group");
+
+    var list = $("toollist");
+    C.tools.forEach(function (t) {
+      var li = el("li");
+      li.innerHTML = ICONS[t.card] || "";
+      var d = el("div");
+      d.appendChild(el("b", "", t.label));
+      d.appendChild(el("span", "", t.does));
+      li.appendChild(d);
+      list.appendChild(li);
+    });
+
+    var tray = $("tray");
+    C.tools.forEach(function (t) {
+      var b = el("button", "toolbtn");
+      b.type = "button";
+      b.id = "tool-" + t.id;
+      b.innerHTML = ICONS[t.card] || "";
+      b.appendChild(el("span", "lab", t.label));
+      b.appendChild(el("span", "hint", t.hint));
+      b.addEventListener("click", function () { pick(t.id); });
+      tray.appendChild(b);
+    });
+  }
+
+  /* ---------- Clock, counter, waiting room ---------- */
+  function setClock(time) {
+    $("time").textContent = time;
+    var m = /^(\d+):(\d+)$/.exec(time);
+    if (!m) return;
+    var h = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+    $("hand-h").setAttribute("transform", "rotate(" + ((h % 12) * 30 + mi * 0.5) + " 20 20)");
+    $("hand-m").setAttribute("transform", "rotate(" + (mi * 6) + " 20 20)");
+  }
+  function setSaved(to) {
+    var node = $("saved-num");
+    var from = parseInt(node.textContent, 10) || 0;
+    clearInterval(counterAnim);
+    if (reduce.matches || to <= from) { node.textContent = to; return; }
+    var box = $("saved");
+    box.classList.remove("pop"); void box.offsetWidth; box.classList.add("pop");
+    var cur = from;
+    counterAnim = setInterval(function () {
+      cur++;
+      node.textContent = cur;
+      if (cur >= to) clearInterval(counterAnim);
+    }, Math.max(18, Math.floor(600 / (to - from))));
+  }
+  function chairSvg(occupied, tone) {
+    var fig = occupied
+      ? '<g style="fill: var(--fig-' + tone + ')"><circle cx="29" cy="11" r="6.5"/><rect x="23" y="19" width="12" height="19" rx="6"/><rect x="27" y="31" width="19" height="7" rx="3.5"/><rect x="40" y="32" width="6.5" height="17" rx="3.2"/></g>'
+      : "";
+    return '<svg viewBox="0 0 64 54" aria-hidden="true">' + fig +
+      '<path class="chair" d="M19 14v25M19 39h27M21 39v12M44 39v12"/></svg>';
+  }
+  function renderWaiting() {
+    var box = $("waiting");
+    box.textContent = "";
+    var names = [];
+    P.forEach(function (p, i) {
+      var waiting = i > S.i || (i === S.i && S.beat === "banner");
+      var seat = el("div", "seat" + (waiting ? "" : " empty"));
+      seat.innerHTML = chairSvg(waiting, (i % 4) + 1);
+      seat.appendChild(el("span", "who", waiting ? p.short : ""));
+      box.appendChild(seat);
+      if (waiting) names.push(p.short);
+    });
+    box.setAttribute("aria-label", names.length ? fill(T.waiting, { names: names.join(", ") }) : T.waitingNone);
+  }
+
+  /* ---------- Tray ---------- */
+  function setTray(mode) {
+    var p = P[S.i];
+    var tray = $("tray");
+    tray.className = "tray" + (mode === "open" ? "" : " " + mode);
+    clearTimeout(msgTimer);
+    $("traymsg").textContent = "";
+    C.tools.forEach(function (t) {
+      var b = $("tool-" + t.id);
+      b.classList.remove("shake");
+      b.disabled = false;
+      b.removeAttribute("aria-disabled");
+      if (mode === "rest") { b.disabled = true; }
+      if (mode === "dead") { b.setAttribute("aria-disabled", "true"); }
+      if (mode === "open") {
+        var used = false;
+        for (var k = 0; k < S.step; k++) if (p.tools[k].id === t.id) used = true;
+        if (used || S.tried[t.id]) b.disabled = true;
+      }
+    });
+  }
+  function nudge(id, text) {
+    var b = $("tool-" + id);
+    b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
+    var msg = $("traymsg");
+    msg.textContent = "";
+    clearTimeout(msgTimer);
+    setTimeout(function () { msg.textContent = text; }, 20);
+    // The note sits over the desk, so it clears itself.
+    msgTimer = setTimeout(function () { msg.textContent = ""; }, 2600);
+  }
+  function pick(id) {
+    if (!S) return;
+    var p = P[S.i];
+    if (!p.tools.length) {
+      if (S.beat === "call") nudge(id, T.noTool);
+      return;
+    }
+    if (!S.picking) return;
+    var expected = p.tools[S.step].id;
+    if (id === expected) {
+      S.step++;
+      if (S.step === p.tools.length) {
+        S.saved += p.saved;
+        setSaved(S.saved);
+      }
+      go("answer");
+      return;
+    }
+    var later = false;
+    for (var k = S.step + 1; k < p.tools.length; k++) if (p.tools[k].id === id) later = true;
+    if (later) { nudge(id, T.tooSoon); return; }
+    S.tried[id] = true;
+    nudge(id, T.wrongTool);
+    var b = $("tool-" + id);
+    setTimeout(function () { if (S && S.tried[id] && S.picking) b.disabled = true; }, 340);
+  }
+
+  /* ---------- Result cards ---------- */
+  function fmt(secs) {
+    var h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+    return h + ":" + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+  }
+  function resultCard(entry, compact) {
+    var t = toolById(entry.id);
+    var card = el("div", "result " + (compact ? "compact" : t.card));
+    var head = el("div", "tool");
+    head.innerHTML = ICONS[t.card] || "";
+    head.appendChild(document.createTextNode(t.label));
+    card.appendChild(head);
+
+    // An earlier result, once the next tool has answered: the words only.
+    if (compact) {
+      card.appendChild(el("p", "", say(entry.answer)));
+      return card;
+    }
+
+    if (t.card === "chat") {
+      if (entry.from) {
+        var from = el("div", "from");
+        var av = el("div", "av", initials(entry.from));
+        av.setAttribute("aria-hidden", "true");
+        from.appendChild(av);
+        var who = el("div");
+        who.appendChild(el("div", "fromname", entry.from));
+        if (entry.meta) who.appendChild(el("div", "meta", entry.meta));
+        from.appendChild(who);
+        card.appendChild(from);
+      }
+      card.appendChild(el("p", "bubble", say(entry.answer)));
+    } else if (t.card === "scan") {
+      var row = el("div", "scanrow");
+      row.innerHTML =
+        '<svg class="xr" viewBox="0 0 92 104" aria-hidden="true">' +
+        '<rect class="plate" width="92" height="104" rx="6"/>' +
+        '<ellipse class="lung" cx="30" cy="54" rx="15" ry="27"/><ellipse class="lung" cx="62" cy="54" rx="15" ry="27"/>' +
+        '<path class="bone" d="M46 14v76M46 26c-12 0-20 5-24 13M46 26c12 0 20 5 24 13M46 40c-13 0-21 5-26 13M46 40c13 0 21 5 26 13M46 54c-13 0-21 5-26 13M46 54c13 0 21 5 26 13M46 68c-11 0-18 4-22 10M46 68c11 0 18 4 22 10"/>' +
+        '<path class="flag" d="M52 28v-6h7M77 28v-6h-7M52 48v6h7M77 48v6h-7"/>' +
+        '</svg>';
+      var line = el("p", "flagline");
+      line.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 18V3M5 4h10l-2.5 3.5L15 11H5"/></svg>';
+      line.appendChild(el("span", "", say(entry.answer)));
+      row.appendChild(line);
+      card.appendChild(row);
+    } else if (t.card === "countdown") {
+      var total = (entry.countdownMinutes || 0) * 60;
+      if (total) {
+        var lcd = el("div", "lcd", fmt(total));
+        lcd.setAttribute("aria-hidden", "true");
+        card.appendChild(lcd);
+        if (!reduce.matches) {
+          var left = total;
+          clearInterval(countdown);
+          countdown = setInterval(function () {
+            if (!lcd.isConnected) { clearInterval(countdown); return; }
+            left = Math.max(0, left - 1);
+            lcd.textContent = fmt(left);
+          }, 1000);
+        }
+      }
+      card.appendChild(el("p", "", say(entry.answer)));
+    } else {
+      card.appendChild(el("p", "bubble", say(entry.answer)));
+    }
+    return card;
+  }
+
+  /* ---------- Beats ---------- */
+  function nameLine(p) {
+    var bits = [p.name, p.age];
+    if (p.role) bits.push(p.role);
+    var h = el("h2", "name", bits.join(", "));
+    return h;
+  }
+  function go(beat) {
+    var p = P[S.i];
+    S.beat = beat;
+    S.picking = false;
+    clearInterval(countdown);
+    var stage = $("stage");
+    stage.textContent = "";
+    var trayMode = p.tools.length ? "rest" : "dead";
+
+    if (beat === "banner") {
+      stage.appendChild(el("p", "banner settle", say(p.banner)));
+      var call = el("button", "primary settle late", p.bannerButton || T.nextPatient);
+      call.type = "button";
+      call.addEventListener("click", function () { go(p.tools.length ? "arrival" : "call"); });
+      stage.appendChild(call);
+      trayMode = "rest";
+    }
+
+    if (beat === "arrival") {
+      stage.appendChild(nameLine(p));
+      stage.appendChild(el("p", "quote settle", say(p.arrival)));
+      stage.appendChild(el("p", "prompt settle late", T.pick));
+      S.picking = true;
+      trayMode = "open";
+    }
+
+    if (beat === "answer") {
+      stage.appendChild(nameLine(p));
+      for (var k = 0; k < S.step; k++) {
+        var rc = resultCard(p.tools[k], k < S.step - 1);
+        if (k === S.step - 1) rc.classList.add("settle");
+        stage.appendChild(rc);
+      }
+      if (S.step < p.tools.length) {
+        stage.appendChild(el("p", "prompt settle late", T.pickNext));
+        S.picking = true;
+        trayMode = "open";
+      } else {
+        if (p.saved) {
+          var plus = el("p", "plus settle late", fill(T.savedPlus, { n: p.saved }));
+          stage.appendChild(plus);
+        }
+        var tellBtn = el("button", "primary settle late", fill(T.tell, { name: p.short }));
+        tellBtn.type = "button";
+        tellBtn.style.display = "block";
+        tellBtn.addEventListener("click", function () { go("call"); });
+        stage.appendChild(tellBtn);
+      }
+    }
+
+    if (beat === "call") {
+      stage.appendChild(nameLine(p));
+      stage.appendChild(el("p", "quote settle", say(p.tools.length ? p.obstacle : p.arrival)));
+      stage.appendChild(el("p", "prompt settle late", say(p.question)));
+      var opts = el("div", "options settle late");
+      p.options.forEach(function (o, idx) {
+        var b = el("button", "opt", say(o.text));
+        b.type = "button";
+        b.addEventListener("click", function () { decide(idx); });
+        opts.appendChild(b);
+      });
+      stage.appendChild(opts);
+    }
+
+    if (beat === "room") {
+      var o = p.options[S.choices[S.i]];
+      stage.appendChild(nameLine(p));
+      stage.appendChild(el("p", "chosen", say(o.text)));
+      stage.appendChild(el("p", "narr settle", say(o.room)));
+      var last = S.i === P.length - 1;
+      var nextBtn = el("button", "primary settle late", last ? T.lastPatient : T.nextPatient);
+      nextBtn.type = "button";
+      nextBtn.style.display = "block";
+      nextBtn.addEventListener("click", function () { if (last) board(); else enter(S.i + 1); });
+      stage.appendChild(nextBtn);
+      trayMode = "rest";
+    }
+
+    setTray(trayMode);
+    // Tools down for the human call. Only a patient with no tool keeps the greyed tray in view.
+    $("traywrap").classList.toggle("away", p.tools.length > 0 && (beat === "call" || beat === "room"));
+    renderWaiting();
+    stage.scrollTop = 0;
+    focusQuietly(stage);
+  }
+
+  // Choices lock on tap. There is no way back.
+  function decide(idx) {
+    if (S.beat !== "call" || S.choices[S.i] !== undefined) return;
+    S.choices[S.i] = idx;
+    go("room");
+  }
+
+  function enter(i) {
+    var p = P[i];
+    S.i = i;
+    S.step = 0;
+    S.tried = {};
+    setClock(p.time);
+    go(p.banner ? "banner" : (p.tools.length ? "arrival" : "call"));
+  }
+
+  function begin() {
+    clearInterval(counterAnim);
+    S = { i: 0, step: 0, beat: null, picking: false, saved: 0, choices: [], tried: {} };
+    $("saved-num").textContent = "0";
+    $("hint").textContent = "";
+    show("shift");
+    enter(0);
+  }
+
+  /* ---------- Four weeks later ---------- */
+  function board() {
+    clearInterval(countdown);
+    var pins = $("pinboard");
+    pins.textContent = "";
+    var landed = 0;
+    P.forEach(function (p, i) {
+      var o = p.options[S.choices[i]];
+      var card = el("article", "pinned");
+      if (o.type === "with") {
+        landed++;
+        var mark = el("span");
+        mark.innerHTML = '<svg class="marker" viewBox="0 0 22 34" aria-hidden="true"><path d="M0 0h22v34l-11-8-11 8z"/></svg>';
+        card.appendChild(mark.firstChild);
+      }
+      card.appendChild(el("h2", "", p.name));
+      var call = el("p", "call");
+      call.appendChild(el("span", "", T.yourCall + " "));
+      call.appendChild(document.createTextNode(say(o.text)));
+      card.appendChild(call);
+      card.appendChild(el("p", "later", say(o.later)));
+      if (o.type === "with") card.appendChild(el("span", "sr", T.landedMark));
+      pins.appendChild(card);
+    });
+    S.landed = landed;
+    S.beat = "board";
+    $("count").textContent = say(T.count, { n: landed });
+    show("board");
+    $("board").scrollTop = 0;
+    focusQuietly($("board-title"));
+    tell("shift:complete", { landed: landed });
+  }
+
+  /* ---------- Wiring ---------- */
+  build();
+  $("open").addEventListener("click", begin);
+  $("again").addEventListener("click", function () {
+    S = null;
+    show("start");
+    $("start").scrollTop = 0;
+    focusQuietly($("start-title"));
+  });
+  $("next").addEventListener("click", function () {
+    tell("shift:next", { landed: S ? S.landed : 0 });
+    $("hint").textContent = T.nextHint;
+  });
+
+  // Read-only view of the state, for testing.
+  window.__shift = { state: function () { return S; } };
+})();
+</script>
+</body>
+</html>
